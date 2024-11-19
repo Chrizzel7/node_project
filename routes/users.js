@@ -7,7 +7,7 @@ module.exports = function (router) {
 
     var userRoute = router.route('/users');
 
-    var userIdRoute = router.route('/user/:id');
+    var userIdRoute = router.route('/users/:id');
 
     userRoute.get(async function (req, res) {
         try {
