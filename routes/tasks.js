@@ -63,6 +63,13 @@ module.exports = function (router) {
         try {
             const newTask = req.body;
             const taskCreated = await Task.create(newTask);
+            if (taskCreated.assignedUser != "") {
+                const user = await User.findById(taskCreated.assignedUser);
+                if (!user.pendingTasks.includes(taskCreated.assignedUser)) {
+                    user.pendingTasks.push(taskCreated.assignedUser);
+                    await user.save();
+                }
+            }
             res.status(201).json({ message: "OK", data: taskCreated});
         } catch (error) {
             if (error.name === 'ValidationError') {
@@ -98,11 +105,22 @@ module.exports = function (router) {
 
             const newTask = req.body;
 
+            const existingTask = await Task.findById(req.params.id);
+            if (!existingTask) {
+                return res.status(404).json({ error: 'Task not found' });
+            }
+
             const updatedTask = await Task.findByIdAndUpdate(req.params.id, newTask, { new: true, runValidators: true });
 
-            if (!updatedTask)
-                return res.status(404).json({ error : 'Task not found' });
-            
+            if (updatedTask.assignedUser !== existingTask.assignedUser) {
+                if (existingTask.assignedUser !== "") {
+                    await User.findByIdAndUpdate( existingTask.assignedUser, { $pull: { pendingTasks: existingTask._id } }, { new: true });
+                }
+                if (updatedTask.assignedUser !== "") {
+                    await User.findByIdAndUpdate( updatedTask.assignedUser, { $addToSet: { pendingTasks: updatedTask._id } }, { new: true});
+                }
+            }
+
             res.status(200).json({ message: "OK", data: updatedTask});
 
         } catch (error) {

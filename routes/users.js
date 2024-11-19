@@ -2,6 +2,7 @@ var secrets = require('../config/secrets');
 
 const User = require('../models/user');
 const Task = require('../models/task');
+const task = require('../models/task');
 
 module.exports = function (router) {
 
@@ -63,7 +64,27 @@ module.exports = function (router) {
         try {
             const user = req.body;
             const userCreated = await User.create(user);
-            res.status(201).json({ message: "OK", data: userCreated });
+            
+            if (userCreated.pendingTasks) {
+                await Promise.all(
+                    userCreated.pendingTasks.map(async task_id => {
+                        const task = await Task.findById(task_id);
+                            // remove the task from the previous asssigned user if there is one
+                            if (task.assignedUserName !== "unassigned") {
+                                const userPrevAssigned = await User.findById(task.assignedUser);
+                                userPrevAssigned.pendingTasks = userPrevAssigned.pendingTasks.filter(userTask_id => userTask_id !== task_id);
+                                await userPrevAssigned.save();
+                            }
+                            // update the task
+                            task.assignedUser = userCreated._id;
+                            task.assignedUserName = userCreated.name;
+                            await task.save();
+                        }
+                    )
+                )
+            }       
+            
+            return res.status(201).json({ message: "OK", data: userCreated });
         } catch (error) {
             if (error.name === 'ValidationError') {
                 res.status(400).json({ error: error.message });
@@ -101,6 +122,13 @@ module.exports = function (router) {
             }
 
             const updatedUser = await User.findByIdAndUpdate(req.params.id, newUser, { new: true, runValidators: true });
+
+            if (newUser.pendingTasks && JSON.stringify(newUser.pendingTasks) !== JSON.stringify(existingUser.pendingTasks)) {
+                const tasksToAssign = newUser.pendingTasks.filter(item => !existingUser.pendingTasks.includes(item));
+                await Task.updateMany({ _id: { $in: tasksToAssign } }, { assignedUser: updatedUser._id, assignedUserName: updatedUser.name });
+                const tasksToUnassign = existingUser.pendingTasks.filter(item => !newUser.pendingTasks.includes(item));
+                await Task.updateMany({ _id: { $in: tasksToUnassign } }, { assignedUser: "", assignedUserName: "unassigned" });
+            }
 
             if (existingUser.name !== updatedUser.name) {
                 await Task.updateMany({ assignedUser : updatedUser._id }, { assignedUserName : updatedUser.name });
