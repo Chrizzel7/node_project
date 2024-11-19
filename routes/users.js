@@ -49,7 +49,7 @@ module.exports = function (router) {
             const users = await User.find(where).sort(sort).select(select).skip(skip).limit(limit);
             
             if (count) {
-                res.status(200).json({ message: "OK", count : users.length });
+                res.status(200).json({ message: "OK", data: { count : users.length } });
             } else {
                 res.status(200).json({ message: "OK", data: users });
             }
