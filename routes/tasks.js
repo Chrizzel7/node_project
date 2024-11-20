@@ -139,7 +139,10 @@ module.exports = function (router) {
             if (!deletedTask)
                 return res.status(404).json({ error : "Task not found" });
             
-            await User.updateMany({pendingTasks : deletedTask._id}, {$pull: {pendingTasks: deletedTask._id}});
+            const updateResult = await User.updateMany({pendingTasks : deletedTask._id}, {$pull: {pendingTasks: deletedTask._id}});
+
+            console.log(`Deleted task: ${deletedTask._id}`);
+            console.log(`Updated users: ${updateResult.modifiedCount}`);    
 
             res.status(200).json({ message: "OK", data: deletedTask});
 
