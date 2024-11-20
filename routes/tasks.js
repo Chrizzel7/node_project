@@ -75,8 +75,8 @@ module.exports = function (router) {
 
             if (taskCreated.assignedUser !== "") {
                 const user = await User.findById(taskCreated.assignedUser);
-                if (!user.pendingTasks.includes(taskCreated.assignedUser)) {
-                    user.pendingTasks.push(taskCreated.assignedUser);
+                if (!user.pendingTasks.includes(taskCreated._id)) {
+                    user.pendingTasks.push(taskCreated._id);
                     await user.save();
                 }
             }
