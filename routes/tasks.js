@@ -115,6 +115,14 @@ module.exports = function (router) {
 
             const newTask = req.body;
 
+            if (newTask.assignedUser && newTask.assignedUser !== "") {
+                const user = await User.findById(newTask.assignedUser);
+                if (!user) {
+                    return res.status(404).json({ error: "Assigned user not found" });
+                }
+                newTask.assignedUserName = user.name;
+            }
+
             const existingTask = await Task.findById(req.params.id);
             if (!existingTask) {
                 return res.status(404).json({ error: 'Task not found' });
