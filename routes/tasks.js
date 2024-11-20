@@ -62,7 +62,17 @@ module.exports = function (router) {
     taskRoute.post(async function (req, res) {
         try {
             const newTask = req.body;
+
+            if (newTask.assignedUser && newTask.assignedUser !== "") {
+                const user = await User.findById(newTask.assignedUser);
+                if (!user) {
+                    return res.status(404).json({ error: "Assigned user not found" });
+                }
+                newTask.assignedUserName = user.name;
+            }
+
             const taskCreated = await Task.create(newTask);
+
             if (taskCreated.assignedUser != "") {
                 const user = await User.findById(taskCreated.assignedUser);
                 if (!user.pendingTasks.includes(taskCreated.assignedUser)) {
